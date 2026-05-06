@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Boards
+Comment= Boards is a Trello like application for COSMIC 
+Type=Application
+Icon=dev.edfloreshz.Boards
+Exec=boards %F
+Terminal=false
+StartupNotify=true
+Categories=COSMIC
+Keywords=COSMIC
+MimeType=
