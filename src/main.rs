@@ -2,7 +2,11 @@
 
 mod app;
 mod config;
+mod db;
 mod i18n;
+mod models;
+mod pages;
+mod widgets;
 
 fn main() -> cosmic::iced::Result {
     // Get the system's preferred languages.
