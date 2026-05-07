@@ -2,6 +2,8 @@
 
  Boards is a Trello like application for COSMIC 
 
+ ![Boards Screenshot](resources/screenshots/window-light.png)
+
 ## Installation
 
 A [justfile](./justfile) is included by default for the [casey/just][just] command runner.
