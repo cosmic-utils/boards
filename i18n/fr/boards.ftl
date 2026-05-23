@@ -1,0 +1,15 @@
+due-date = Date d'échéance
+move-to-list = Déplacer vers la liste
+delete-card = Supprimer la carte
+in-list = Dans la liste
+git-description = Commit Git {$hash} le {$date}
+add-item = Ajouter un élément
+no-due-date = Aucune date d'échéance
+pick-date = Choisir une date
+hide-date-picker = Masquer le sélecteur
+clear-date = Effacer
+move-card = Déplacer la carte
+move-up = Monter
+move-down = Descendre
+rename-board = Renommer le tableau
+board-name = Nom du tableau
