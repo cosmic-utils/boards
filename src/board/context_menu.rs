@@ -13,7 +13,6 @@ use crate::{
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum NavMenuAction {
-    Open(Uuid),
     OpenSettings(Uuid),
     Delete(Uuid),
 }
@@ -23,7 +22,6 @@ impl menu::Action for NavMenuAction {
 
     fn message(&self) -> Self::Message {
         cosmic::Action::App(match *self {
-            NavMenuAction::Open(id) => Message::Board(BoardMessage::Activate(id)),
             NavMenuAction::OpenSettings(id) => Message::Board(BoardMessage::OpenSettings(id)),
             NavMenuAction::Delete(id) => Message::Board(BoardMessage::Delete(id)),
         })
@@ -41,7 +39,6 @@ impl AppModel {
                         return Vec::new();
                     };
                     vec![
-                        menu::Item::Button(fl!("open"), None, NavMenuAction::Open(id)),
                         menu::Item::Button(
                             fl!("board-settings"),
                             None,

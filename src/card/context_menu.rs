@@ -14,8 +14,14 @@ pub enum CardMenuAction {
     Open(Uuid),
     MoveUp(Uuid),
     MoveDown(Uuid),
-    MoveToList { card_id: Uuid, target_list_id: Uuid },
-    ToggleTag { card_id: Uuid, tag_id: Uuid },
+    MoveToColumn {
+        card_id: Uuid,
+        target_column_id: Uuid,
+    },
+    ToggleTag {
+        card_id: Uuid,
+        tag_id: Uuid,
+    },
     ClearDueDate(Uuid),
     Delete(Uuid),
 }
@@ -28,12 +34,12 @@ impl menu::Action for CardMenuAction {
             CardMenuAction::Open(card_id) => CardMessage::Open(card_id),
             CardMenuAction::MoveUp(card_id) => CardMessage::MoveUp(card_id),
             CardMenuAction::MoveDown(card_id) => CardMessage::MoveDown(card_id),
-            CardMenuAction::MoveToList {
+            CardMenuAction::MoveToColumn {
                 card_id,
-                target_list_id,
-            } => CardMessage::MoveToList {
+                target_column_id,
+            } => CardMessage::MoveToColumn {
                 card_id,
-                target_list_id,
+                target_column_id,
             },
             CardMenuAction::ToggleTag { card_id, tag_id } => {
                 CardMessage::ToggleTag { card_id, tag_id }
@@ -55,22 +61,22 @@ pub fn card_context_menu(card: &Card, ctx: &BoardContext) -> Option<Vec<menu::Tr
         menu::Item::Button(fl!("move-down"), None, CardMenuAction::MoveDown(card_id)),
     ];
 
-    if !ctx.other_lists.is_empty() {
-        let move_to_list = ctx
-            .other_lists
+    if !ctx.other_columns.is_empty() {
+        let move_to_column = ctx
+            .other_columns
             .iter()
-            .map(|(target_list_id, title)| {
+            .map(|(target_column_id, title)| {
                 menu::Item::Button(
                     title.clone(),
                     None,
-                    CardMenuAction::MoveToList {
+                    CardMenuAction::MoveToColumn {
                         card_id,
-                        target_list_id: *target_list_id,
+                        target_column_id: *target_column_id,
                     },
                 )
             })
             .collect();
-        items.push(menu::Item::Folder(fl!("move-to-list"), move_to_list));
+        items.push(menu::Item::Folder(fl!("move-to-column"), move_to_column));
     }
 
     if !ctx.tags.is_empty() {

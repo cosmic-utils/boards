@@ -140,7 +140,7 @@ impl AppModel {
         let Some(board) = self.active_board() else {
             return widget::column![].into();
         };
-        let Some((list, card)) = board.lists.iter().find_map(|l| {
+        let Some((column, card)) = board.columns.iter().find_map(|l| {
             l.cards
                 .iter()
                 .find(|c| c.id == dialog.card_id)
@@ -157,7 +157,7 @@ impl AppModel {
             .on_input(move |new_title| wrap_card(CardMessage::UpdateTitle { card_id, new_title }))
             .width(Length::Fill);
 
-        let in_list = widget::text::caption(format!("{}: {}", fl!("in-list"), list.title));
+        let in_column = widget::text::caption(format!("{}: {}", fl!("in-column"), column.title));
 
         let due_date_text = match card.due_date {
             Some(d) => format!("📅 {d}"),
@@ -313,8 +313,8 @@ impl AppModel {
             add_item_btn.into(),
         ]));
 
-        let card_idx = list.cards.iter().position(|c| c.id == card.id);
-        let list_len = list.cards.len();
+        let card_idx = column.cards.iter().position(|c| c.id == card.id);
+        let column_len = column.cards.len();
 
         let mut order_items: Vec<Element<'_, Message>> = Vec::new();
         if card_idx.map(|i| i > 0).unwrap_or(false) {
@@ -324,7 +324,7 @@ impl AppModel {
                     .into(),
             );
         }
-        if card_idx.map(|i| i + 1 < list_len).unwrap_or(false) {
+        if card_idx.map(|i| i + 1 < column_len).unwrap_or(false) {
             order_items.push(
                 widget::button::text(fl!("move-down"))
                     .on_press(wrap_card(CardMessage::MoveDown(card_id)))
@@ -332,22 +332,23 @@ impl AppModel {
             );
         }
 
-        let other_lists: Vec<_> = board.lists.iter().filter(|l| l.id != list.id).collect();
+        let other_columns: Vec<_> = board.columns.iter().filter(|l| l.id != column.id).collect();
 
-        let move_section: Option<Element<'_, Message>> = if !other_lists.is_empty()
+        let move_section: Option<Element<'_, Message>> = if !other_columns.is_empty()
             || !order_items.is_empty()
         {
             let mut section = widget::settings::section().title(fl!("move-card"));
 
-            if !other_lists.is_empty() {
-                let mut move_row = widget::row::with_capacity(other_lists.len()).spacing(space_xs);
-                for target_list in &other_lists {
-                    let target_list_id = target_list.id;
+            if !other_columns.is_empty() {
+                let mut move_row =
+                    widget::row::with_capacity(other_columns.len()).spacing(space_xs);
+                for target_column in &other_columns {
+                    let target_column_id = target_column.id;
                     move_row =
-                        move_row.push(widget::button::text(target_list.title.as_str()).on_press(
-                            wrap_card(CardMessage::MoveToList {
+                        move_row.push(widget::button::text(target_column.title.as_str()).on_press(
+                            wrap_card(CardMessage::MoveToColumn {
                                 card_id,
-                                target_list_id,
+                                target_column_id,
                             }),
                         ));
                 }
@@ -381,7 +382,7 @@ impl AppModel {
 
         let col = widget::column::with_capacity(4)
             .push(title_input)
-            .push(in_list)
+            .push(in_column)
             .push(content)
             .push(delete_btn)
             .spacing(space_s)

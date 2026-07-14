@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::tag::Tag;
 
 pub struct BoardContext<'a> {
-    pub other_lists: &'a [(Uuid, String)],
+    pub other_columns: &'a [(Uuid, String)],
     pub tags: &'a [Tag],
     pub search_query: &'a str,
 }

@@ -4,32 +4,32 @@ use dialogs::{DialogHost, DialogSlot};
 use crate::fl;
 
 #[derive(Debug, Clone)]
-pub struct NewListDialog {
-    pub dialog: DialogSlot<NewListState>,
+pub struct NewColumnDialog {
+    pub dialog: DialogSlot<NewColumnState>,
 }
 
-impl NewListDialog {
+impl NewColumnDialog {
     pub fn new() -> Self {
         Self {
-            dialog: DialogSlot::new(NewListState::new()),
+            dialog: DialogSlot::new(NewColumnState::new()),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct NewListState {
+pub struct NewColumnState {
     pub title: String,
     pub input_id: widget::Id,
 }
 
 #[derive(Debug, Clone)]
-pub enum NewListMessage {
+pub enum NewColumnMessage {
     NameChanged(String),
     Submit,
     Close,
 }
 
-impl NewListState {
+impl NewColumnState {
     pub fn new() -> Self {
         Self {
             title: String::new(),
@@ -38,25 +38,26 @@ impl NewListState {
     }
 }
 
-impl DialogHost for NewListDialog {
-    type Message = NewListMessage;
+impl DialogHost for NewColumnDialog {
+    type Message = NewColumnMessage;
 
     fn dialog(&self) -> Option<cosmic::prelude::Element<'_, Self::Message>> {
         self.dialog.get().map(|state| {
-            let title_input = widget::text_input(fl!("list-title"), state.title.as_str())
+            let title_input = widget::text_input(fl!("column-title"), state.title.as_str())
                 .id(state.input_id.clone())
-                .on_input(NewListMessage::NameChanged)
-                .on_submit(|_| NewListMessage::Submit)
+                .on_input(NewColumnMessage::NameChanged)
+                .on_submit(|_| NewColumnMessage::Submit)
                 .width(Length::Fill);
 
             let create_btn =
-                widget::button::suggested(fl!("new-list")).on_press(NewListMessage::Submit);
+                widget::button::suggested(fl!("new-column")).on_press(NewColumnMessage::Submit);
 
-            let close_btn = widget::button::standard(fl!("cancel")).on_press(NewListMessage::Close);
+            let close_btn =
+                widget::button::standard(fl!("cancel")).on_press(NewColumnMessage::Close);
 
             widget::dialog()
-                .title(fl!("new-list"))
-                .body(fl!("list-title"))
+                .title(fl!("new-column"))
+                .body(fl!("column-title"))
                 .control(title_input)
                 .primary_action(create_btn)
                 .secondary_action(close_btn)
@@ -66,12 +67,12 @@ impl DialogHost for NewListDialog {
 
     fn update(&mut self, message: Self::Message) -> cosmic::prelude::Task<Self::Message> {
         match message {
-            NewListMessage::NameChanged(title) => {
+            NewColumnMessage::NameChanged(title) => {
                 if let Some(state) = self.dialog.get_mut() {
                     state.title = title;
                 }
             }
-            NewListMessage::Submit | NewListMessage::Close => {
+            NewColumnMessage::Submit | NewColumnMessage::Close => {
                 self.dialog.dismiss();
             }
         }

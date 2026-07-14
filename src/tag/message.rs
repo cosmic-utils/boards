@@ -46,8 +46,8 @@ impl AppModel {
             TagMessage::Delete(id) => {
                 if let Some(board) = self.active_board_mut() {
                     board.tags.retain(|t| t.id != id);
-                    for list in &mut board.lists {
-                        for card in &mut list.cards {
+                    for column in &mut board.columns {
+                        for card in &mut column.cards {
                             card.tag_ids.retain(|tag_id| *tag_id != id);
                         }
                     }

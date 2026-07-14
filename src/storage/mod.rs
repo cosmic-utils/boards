@@ -24,6 +24,6 @@ pub struct BoardSummary {
     pub background: cosmic::iced::Color,
     #[serde(default = "crate::board::default_board_icon")]
     pub icon: String,
-    pub list_count: usize,
+    pub column_count: usize,
     pub card_count: usize,
 }

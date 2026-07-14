@@ -10,9 +10,9 @@ use crate::app::{AppModel, DialogPage, Message};
 use crate::board::Board;
 use crate::board::context::BoardContext;
 use crate::board::dialog::NewBoardDialog;
+use crate::column::dialog::NewColumnDialog;
+use crate::column::widget::{view_column, view_column_with_input};
 use crate::fl;
-use crate::list::dialog::NewListDialog;
-use crate::list::widget::{view_list, view_list_with_input};
 use crate::widgets::content_unavailable::content_unavailable;
 
 impl AppModel {
@@ -43,47 +43,47 @@ impl AppModel {
             space_m, space_l, ..
         } = cosmic::theme::spacing();
 
-        if board.lists.is_empty() {
-            return content_unavailable(fl!("no-lists"))
-                .description(fl!("add-list-description"))
+        if board.columns.is_empty() {
+            return content_unavailable(fl!("no-columns"))
+                .description(fl!("add-column-description"))
                 .action(
-                    fl!("add-list"),
-                    Message::OpenDialogPage(DialogPage::NewList(NewListDialog::new())),
+                    fl!("add-column"),
+                    Message::OpenDialogPage(DialogPage::NewColumn(NewColumnDialog::new())),
                 )
                 .into();
         }
 
-        let mut row = widget::row::with_capacity(board.lists.len() + 1)
+        let mut row = widget::row::with_capacity(board.columns.len() + 1)
             .spacing(space_m)
             .padding([space_m, space_l])
             .height(Length::Fill);
 
         let search_query = self.search_query.to_lowercase();
 
-        for list in &board.lists {
+        for column in &board.columns {
             let (drag_hovered_card_id, tail_active) = match self.drag_hover {
-                Some((lid, Some(cid))) if lid == list.id => (Some(cid), false),
-                Some((lid, None)) if lid == list.id => (None, true),
+                Some((lid, Some(cid))) if lid == column.id => (Some(cid), false),
+                Some((lid, None)) if lid == column.id => (None, true),
                 _ => (None, false),
             };
-            let editing_title = self.editing_list_title == Some(list.id);
-            let other_lists: Vec<(Uuid, String)> = board
-                .lists
+            let editing_title = self.editing_column_title == Some(column.id);
+            let other_columns: Vec<(Uuid, String)> = board
+                .columns
                 .iter()
-                .filter(|l| l.id != list.id)
+                .filter(|l| l.id != column.id)
                 .map(|l| (l.id, l.title.clone()))
                 .collect();
             let ctx = BoardContext {
-                other_lists: &other_lists,
+                other_columns: &other_columns,
                 tags: &board.tags,
                 search_query: &search_query,
             };
-            let col = if let Some((ref input_id, ref active_list_id, ref input_text)) =
+            let col = if let Some((ref input_id, ref active_column_id, ref input_text)) =
                 self.new_card_input
             {
-                if *active_list_id == list.id {
-                    view_list_with_input(
-                        list,
+                if *active_column_id == column.id {
+                    view_column_with_input(
+                        column,
                         editing_title,
                         &ctx,
                         input_text,
@@ -92,10 +92,22 @@ impl AppModel {
                         tail_active,
                     )
                 } else {
-                    view_list(list, editing_title, &ctx, drag_hovered_card_id, tail_active)
+                    view_column(
+                        column,
+                        editing_title,
+                        &ctx,
+                        drag_hovered_card_id,
+                        tail_active,
+                    )
                 }
             } else {
-                view_list(list, editing_title, &ctx, drag_hovered_card_id, tail_active)
+                view_column(
+                    column,
+                    editing_title,
+                    &ctx,
+                    drag_hovered_card_id,
+                    tail_active,
+                )
             };
             row = row.push(col);
         }

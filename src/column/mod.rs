@@ -10,14 +10,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct List {
+pub struct Column {
     pub id: Uuid,
     pub title: String,
     pub cards: Vec<Card>,
     pub position: u32,
 }
 
-impl List {
+impl Column {
     pub fn new(title: String, position: u32) -> Self {
         Self {
             id: Uuid::new_v4(),

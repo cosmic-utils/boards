@@ -9,11 +9,11 @@ use uuid::Uuid;
 use crate::app::Message;
 use crate::board::context::BoardContext;
 use crate::card::widget::view_card;
+use crate::column::Column;
+use crate::column::context_menu::column_context_menu;
+use crate::column::message::ColumnMessage;
 use crate::dnd::CardDragData;
 use crate::dnd::message::DndMessage;
-use crate::list::List;
-use crate::list::context_menu::list_context_menu;
-use crate::list::message::ListMessage;
 
 const TAIL_HEIGHT: f32 = 48.0;
 const EMPTY_HEIGHT: f32 = 100.0;
@@ -48,7 +48,7 @@ fn append_visual(active: bool, height: f32) -> Element<'static, Message> {
     }
 }
 
-fn append_drop_zone(list_id: Uuid, active: bool, height: f32) -> Element<'static, Message> {
+fn append_drop_zone(column_id: Uuid, active: bool, height: f32) -> Element<'static, Message> {
     let visual = append_visual(active, height);
 
     cosmic::widget::dnd_destination::dnd_destination_for_data::<CardDragData, Message>(
@@ -56,7 +56,7 @@ fn append_drop_zone(list_id: Uuid, active: bool, height: f32) -> Element<'static
         move |data, _action| match data {
             Some(d) => Message::Dnd(DndMessage::CardDropped {
                 card_id: d.card_id,
-                target_list_id: list_id,
+                target_column_id: column_id,
                 before_card_id: None,
             }),
             None => Message::Dnd(DndMessage::CardCancelled),
@@ -64,7 +64,7 @@ fn append_drop_zone(list_id: Uuid, active: bool, height: f32) -> Element<'static
     )
     .on_enter(move |_, _, _| {
         Message::Dnd(DndMessage::HoverChanged {
-            list_id,
+            column_id,
             before_card_id: None,
         })
     })
@@ -72,20 +72,24 @@ fn append_drop_zone(list_id: Uuid, active: bool, height: f32) -> Element<'static
     .into()
 }
 
-fn new_card_input<'a>(input_id: &widget::Id, list_id: Uuid, text: &'a str) -> Element<'a, Message> {
+fn new_card_input<'a>(
+    input_id: &widget::Id,
+    column_id: Uuid,
+    text: &'a str,
+) -> Element<'a, Message> {
     let space_xs = cosmic::theme::spacing().space_xs;
 
     let input = widget::text_input("Card title…", text)
         .id(input_id.clone())
-        .on_input(|title| Message::List(ListMessage::NewCardInputChanged(title)))
-        .on_submit(move |_| Message::List(ListMessage::ConfirmNewCard(list_id)))
+        .on_input(|title| Message::Column(ColumnMessage::NewCardInputChanged(title)))
+        .on_submit(move |_| Message::Column(ColumnMessage::ConfirmNewCard(column_id)))
         .width(Length::Fill);
 
     let confirm_btn = widget::button::suggested("Add")
-        .on_press(Message::List(ListMessage::ConfirmNewCard(list_id)));
+        .on_press(Message::Column(ColumnMessage::ConfirmNewCard(column_id)));
 
     let cancel_btn =
-        widget::button::text("Cancel").on_press(Message::List(ListMessage::DismissNewInput));
+        widget::button::text("Cancel").on_press(Message::Column(ColumnMessage::DismissNewInput));
 
     let buttons = widget::row::with_capacity(2)
         .push(confirm_btn)
@@ -99,55 +103,64 @@ fn new_card_input<'a>(input_id: &widget::Id, list_id: Uuid, text: &'a str) -> El
         .into()
 }
 
-fn build_header(list: &List, editing_title: bool) -> Element<'_, Message> {
+fn build_header(column: &Column, editing_title: bool) -> Element<'_, Message> {
     let Spacing {
         space_xs,
         space_xxs,
         ..
     } = cosmic::theme::spacing();
 
-    let list_id = list.id;
+    let column_id = column.id;
 
     let title_input = widget::editable_input(
-        "List title…",
-        list.title.as_str(),
+        "Column title…",
+        column.title.as_str(),
         editing_title,
-        move |_| Message::List(ListMessage::ToggleTitleEdit(list_id)),
+        move |_| Message::Column(ColumnMessage::ToggleTitleEdit(column_id)),
     )
-    .on_input(move |new_title| Message::List(ListMessage::Rename { list_id, new_title }))
+    .font(cosmic::font::bold())
+    .on_input(move |new_title| {
+        Message::Column(ColumnMessage::Rename {
+            column_id,
+            new_title,
+        })
+    })
     .width(Length::Fill);
 
     let row = widget::row::with_capacity(2)
         .push(title_input)
         .push(
             widget::button::icon(widget::icon::from_name("list-add-symbolic")).on_press(
-                Message::List(ListMessage::OpenNewCardInput(widget::Id::unique(), list_id)),
+                Message::Column(ColumnMessage::OpenNewCardInput(
+                    widget::Id::unique(),
+                    column_id,
+                )),
             ),
         )
         .align_y(Alignment::Center)
         .spacing(space_xs)
         .padding([space_xxs, space_xs]);
 
-    cosmic::widget::context_menu(row, list_context_menu(list_id)).into()
+    cosmic::widget::context_menu(row, column_context_menu(column_id)).into()
 }
 
 fn build_cards_column<'a>(
-    list: &'a List,
+    column: &'a Column,
     ctx: &BoardContext<'_>,
     drag_hovered_card_id: Option<Uuid>,
     tail_active: bool,
 ) -> Element<'a, Message> {
     let space_xs = cosmic::theme::spacing().space_xs;
-    let list_id = list.id;
+    let column_id = column.id;
 
-    let visible: Vec<&crate::card::Card> = list
+    let visible: Vec<&crate::card::Card> = column
         .cards
         .iter()
         .filter(|c| ctx.matches(&c.title, &c.tag_ids))
         .collect();
 
     if visible.is_empty() {
-        let zone = append_drop_zone(list_id, tail_active, EMPTY_HEIGHT);
+        let zone = append_drop_zone(column_id, tail_active, EMPTY_HEIGHT);
         return widget::column::with_capacity(1)
             .push(zone)
             .padding([0, space_xs])
@@ -161,24 +174,24 @@ fn build_cards_column<'a>(
 
     for card in visible {
         let is_target = Some(card.id) == drag_hovered_card_id;
-        col = col.push(view_card(card, is_target, list_id, ctx));
+        col = col.push(view_card(card, is_target, column_id, ctx));
     }
 
-    col = col.push(append_drop_zone(list_id, tail_active, TAIL_HEIGHT));
+    col = col.push(append_drop_zone(column_id, tail_active, TAIL_HEIGHT));
 
     col.into()
 }
 
-pub fn view_list<'a>(
-    list: &'a List,
+pub fn view_column<'a>(
+    column: &'a Column,
     editing_title: bool,
     ctx: &BoardContext<'_>,
     drag_hovered_card_id: Option<Uuid>,
     tail_active: bool,
 ) -> Element<'a, Message> {
-    let header = build_header(list, editing_title);
+    let header = build_header(column, editing_title);
 
-    let cards_area = build_cards_column(list, ctx, drag_hovered_card_id, tail_active);
+    let cards_area = build_cards_column(column, ctx, drag_hovered_card_id, tail_active);
     let scrollable_body = widget::scrollable::vertical(cards_area).height(Length::Fill);
 
     let inner_col = widget::column::with_capacity(5)
@@ -190,12 +203,12 @@ pub fn view_list<'a>(
     widget::container(inner_col)
         .width(280)
         .height(Length::Fill)
-        .class(cosmic::theme::Container::Secondary)
+        .class(cosmic::theme::Container::Card)
         .into()
 }
 
-pub fn view_list_with_input<'a>(
-    list: &'a List,
+pub fn view_column_with_input<'a>(
+    column: &'a Column,
     editing_title: bool,
     ctx: &BoardContext<'_>,
     input_text: &'a str,
@@ -206,13 +219,13 @@ pub fn view_list_with_input<'a>(
     let space_xs = cosmic::theme::spacing().space_xs;
     let space_s = cosmic::theme::spacing().space_s;
 
-    let list_id = list.id;
-    let header = build_header(list, editing_title);
+    let column_id = column.id;
+    let header = build_header(column, editing_title);
 
-    let cards_area = build_cards_column(list, ctx, drag_hovered_card_id, tail_active);
+    let cards_area = build_cards_column(column, ctx, drag_hovered_card_id, tail_active);
     let scrollable_body = widget::scrollable::vertical(cards_area).height(Length::Fill);
 
-    let footer_content = new_card_input(input_id, list_id, input_text);
+    let footer_content = new_card_input(input_id, column_id, input_text);
     let footer_container = widget::container(footer_content).padding([space_xs, space_s]);
 
     let inner_col = widget::column::with_capacity(5)

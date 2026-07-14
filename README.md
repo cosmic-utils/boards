@@ -38,7 +38,7 @@ Developers should install [rustup][rustup] and configure their editor to use [ru
 
 [fluent]: https://projectfluent.org/
 [fluent-guide]: https://projectfluent.org/fluent/guide/hello.html
-[iso-codes]: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+[iso-codes]: https://en.wikipedia.org/wiki/Column_of_ISO_639-1_codes
 [just]: https://github.com/casey/just
 [rustup]: https://rustup.rs/
 [rust-analyzer]: https://rust-analyzer.github.io/

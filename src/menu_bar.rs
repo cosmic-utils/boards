@@ -15,14 +15,14 @@ use uuid::Uuid;
 use crate::{
     app::{AppModel, ContextPage, DialogPage, Message},
     board::{dialog::NewBoardDialog, message::BoardMessage},
+    column::dialog::NewColumnDialog,
     fl,
-    list::dialog::NewListDialog,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MenuAction {
     NewBoard,
-    NewList,
+    NewColumn,
     BoardSettings(Uuid),
     DeleteBoard(Uuid),
     ToggleSidebar,
@@ -38,8 +38,8 @@ impl menu::action::MenuAction for MenuAction {
             MenuAction::NewBoard => {
                 Message::OpenDialogPage(DialogPage::NewBoard(NewBoardDialog::new()))
             }
-            MenuAction::NewList => {
-                Message::OpenDialogPage(DialogPage::NewList(NewListDialog::new()))
+            MenuAction::NewColumn => {
+                Message::OpenDialogPage(DialogPage::NewColumn(NewColumnDialog::new()))
             }
             MenuAction::BoardSettings(id) => Message::Board(BoardMessage::OpenSettings(id)),
             MenuAction::DeleteBoard(id) => Message::Board(BoardMessage::Delete(id)),
@@ -64,7 +64,7 @@ pub fn menu_bar(app: &AppModel) -> Element<'_, Message> {
 
     let file_items = vec![
         menu::Item::Button(fl!("new-board"), None, MenuAction::NewBoard),
-        item(fl!("new-list"), has_board, MenuAction::NewList),
+        item(fl!("new-column"), has_board, MenuAction::NewColumn),
         menu::Item::Divider,
         menu::Item::Button(fl!("quit"), None, MenuAction::Quit),
     ];
@@ -134,7 +134,7 @@ pub fn key_binds() -> HashMap<KeyBind, MenuAction> {
         bind!(
             [Super, Shift],
             Key::Character("n".into()),
-            MenuAction::NewList
+            MenuAction::NewColumn
         );
         bind!(
             [Super],
@@ -153,7 +153,7 @@ pub fn key_binds() -> HashMap<KeyBind, MenuAction> {
         bind!(
             [Ctrl, Shift],
             Key::Character("n".into()),
-            MenuAction::NewList
+            MenuAction::NewColumn
         );
         bind!(
             [Ctrl],

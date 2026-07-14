@@ -25,10 +25,10 @@ use crate::{
         },
         message::CardMessage,
     },
+    column::{dialog::NewColumnDialog, dialog::NewColumnMessage, message::ColumnMessage},
     config::Config,
     dnd::message::DndMessage,
     fl,
-    list::{dialog::NewListDialog, dialog::NewListMessage, message::ListMessage},
     menu_bar::{self, MenuAction},
     storage::{DataStore, store::Store},
     tag::{
@@ -53,7 +53,7 @@ pub struct AppModel {
     pub tag_dialog: Option<TagDialog>,
     pub accent_color_dialog: Option<AccentColorDialog>,
     pub drag_hover: Option<(Uuid, Option<Uuid>)>,
-    pub editing_list_title: Option<Uuid>,
+    pub editing_column_title: Option<Uuid>,
     pub search_query: String,
     pub suppress_next_card_open: bool,
 }
@@ -61,7 +61,7 @@ pub struct AppModel {
 #[derive(Debug, Clone)]
 pub enum Message {
     NewBoardDialog(NewBoardMessage),
-    NewListDialog(NewListMessage),
+    NewColumnDialog(NewColumnMessage),
     BoardSettingsDialog(BoardSettingsMessage),
     TagDialog(TagDialogMessage),
     OpenTagDialog(Option<Uuid>),
@@ -70,7 +70,7 @@ pub enum Message {
     CardDetailsDialog(CardDetailsMessage),
 
     Board(BoardMessage),
-    List(ListMessage),
+    Column(ColumnMessage),
     CardMenuAction(CardMessage),
     CardClickReleased(Uuid),
     Dnd(DndMessage),
@@ -91,7 +91,7 @@ pub enum Message {
 #[derive(Debug, Clone)]
 pub enum DialogPage {
     NewBoard(NewBoardDialog),
-    NewList(NewListDialog),
+    NewColumn(NewColumnDialog),
     BoardSettings(BoardSettingsDialog),
     CardDetail(CardDetailDialog),
 }
@@ -165,7 +165,7 @@ impl cosmic::Application for AppModel {
             tag_dialog: None,
             accent_color_dialog: None,
             drag_hover: None,
-            editing_list_title: None,
+            editing_column_title: None,
             search_query: String::new(),
             suppress_next_card_open: false,
         };
@@ -210,8 +210,8 @@ impl cosmic::Application for AppModel {
         if let Some(board) = self.active_board() {
             vec![
                 widget::button::icon(widget::icon::from_name("list-add-symbolic"))
-                    .on_press(Message::OpenDialogPage(DialogPage::NewList(
-                        NewListDialog::new(),
+                    .on_press(Message::OpenDialogPage(DialogPage::NewColumn(
+                        NewColumnDialog::new(),
                     )))
                     .into(),
                 widget::button::icon(widget::icon::from_name("emblem-system-symbolic"))
@@ -243,7 +243,7 @@ impl cosmic::Application for AppModel {
 
         match page {
             DialogPage::NewBoard(p) => p.dialog().map(|el| el.map(Message::NewBoardDialog)),
-            DialogPage::NewList(p) => p.dialog().map(|el| el.map(Message::NewListDialog)),
+            DialogPage::NewColumn(p) => p.dialog().map(|el| el.map(Message::NewColumnDialog)),
             DialogPage::BoardSettings(p) => {
                 p.dialog().map(|el| el.map(Message::BoardSettingsDialog))
             }
@@ -289,7 +289,7 @@ impl cosmic::Application for AppModel {
     fn update(&mut self, message: Self::Message) -> Task<cosmic::Action<Self::Message>> {
         match message {
             Message::Board(msg) => return self.update_board(msg),
-            Message::List(msg) => return self.update_list(msg),
+            Message::Column(msg) => return self.update_column(msg),
             Message::Dnd(msg) => return self.update_dnd(msg),
 
             Message::CardMenuAction(msg) => {
@@ -325,7 +325,7 @@ impl cosmic::Application for AppModel {
                         .get()
                         .map(|s| cosmic::widget::text_input::focus(s.input_id.clone()))
                         .unwrap_or_else(Task::none),
-                    DialogPage::NewList(dialog) => dialog
+                    DialogPage::NewColumn(dialog) => dialog
                         .dialog
                         .get()
                         .map(|s| cosmic::widget::text_input::focus(s.input_id.clone()))
@@ -421,9 +421,9 @@ impl cosmic::Application for AppModel {
                     return task;
                 }
             }
-            Message::NewListDialog(message) => {
-                if matches!(message, NewListMessage::Submit) {
-                    if let Some(DialogPage::NewList(dialog)) = &self.page {
+            Message::NewColumnDialog(message) => {
+                if matches!(message, NewColumnMessage::Submit) {
+                    if let Some(DialogPage::NewColumn(dialog)) = &self.page {
                         let title = dialog
                             .dialog
                             .get()
@@ -431,15 +431,15 @@ impl cosmic::Application for AppModel {
                             .unwrap_or_default();
                         self.page = None;
                         if !title.is_empty() {
-                            return self.update_list(ListMessage::Create(title));
+                            return self.update_column(ColumnMessage::Create(title));
                         }
                     }
                     return Task::none();
                 }
-                if let Some(DialogPage::NewList(dialog)) = &mut self.page {
+                if let Some(DialogPage::NewColumn(dialog)) = &mut self.page {
                     let task = dialog
                         .update(message)
-                        .map(Message::NewListDialog)
+                        .map(Message::NewColumnDialog)
                         .map(cosmic::action::app);
                     if dialog.dialog.get().is_none() {
                         self.page = None;
@@ -575,7 +575,7 @@ impl cosmic::Application for AppModel {
     fn on_nav_select(&mut self, id: nav_bar::Id) -> Task<cosmic::Action<Self::Message>> {
         self.nav.activate(id);
         self.new_card_input = None;
-        self.editing_list_title = None;
+        self.editing_column_title = None;
         self.core.window.show_context = false;
 
         let load_task = if let Some(board_id) = self.active_board_id() {
@@ -613,14 +613,14 @@ impl AppModel {
 
     pub fn active_card(&self, card_id: Uuid) -> Option<&Card> {
         self.active_board()?
-            .lists
+            .columns
             .iter()
             .find_map(|l| l.cards.iter().find(|c| c.id == card_id))
     }
 
     pub fn active_card_mut(&mut self, card_id: Uuid) -> Option<&mut Card> {
         self.active_board_mut()?
-            .lists
+            .columns
             .iter_mut()
             .find_map(|l| l.cards.iter_mut().find(|c| c.id == card_id))
     }

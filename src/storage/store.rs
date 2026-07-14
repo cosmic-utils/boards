@@ -100,13 +100,14 @@ impl Store {
                 if path.extension().and_then(|e| e.to_str()) == Some("toml") {
                     if let Ok(content) = std::fs::read_to_string(&path) {
                         if let Ok(board) = toml::from_str::<Board>(&content) {
-                            let card_count: usize = board.lists.iter().map(|l| l.cards.len()).sum();
+                            let card_count: usize =
+                                board.columns.iter().map(|l| l.cards.len()).sum();
                             summaries.push(BoardSummary {
                                 id: board.id,
                                 title: board.title.clone(),
                                 background: board.background,
                                 icon: board.icon.clone(),
-                                list_count: board.lists.len(),
+                                column_count: board.columns.len(),
                                 card_count,
                             });
                         }

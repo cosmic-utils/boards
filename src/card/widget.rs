@@ -50,7 +50,7 @@ fn semantic_badge<'a>(text: String, kind: BadgeKind) -> Element<'a, Message> {
 pub fn view_card<'a>(
     card: &'a Card,
     is_drop_target: bool,
-    list_id: Uuid,
+    column_id: Uuid,
     ctx: &BoardContext<'_>,
 ) -> Element<'a, Message> {
     let space_xxs = cosmic::theme::spacing().space_xxs;
@@ -165,7 +165,7 @@ pub fn view_card<'a>(
             .into()
     } else {
         widget::container(content)
-            .class(cosmic::theme::Container::Card)
+            .class(cosmic::theme::Container::Secondary)
             .width(Length::Fill)
             .into()
     };
@@ -186,7 +186,7 @@ pub fn view_card<'a>(
             move |data, _action| match data {
                 Some(d) => Message::Dnd(DndMessage::CardDropped {
                     card_id: d.card_id,
-                    target_list_id: list_id,
+                    target_column_id: column_id,
                     before_card_id: Some(card_id),
                 }),
                 None => Message::Dnd(DndMessage::CardCancelled),
@@ -194,7 +194,7 @@ pub fn view_card<'a>(
         )
         .on_enter(move |_, _, _| {
             Message::Dnd(DndMessage::HoverChanged {
-                list_id,
+                column_id,
                 before_card_id: Some(card_id),
             })
         })

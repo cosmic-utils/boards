@@ -4,13 +4,13 @@ use uuid::Uuid;
 use crate::{
     app::{AppModel, Message},
     card::message::CardMessage,
-    list::List,
+    column::Column,
 };
 
 #[derive(Debug, Clone)]
-pub enum ListMessage {
+pub enum ColumnMessage {
     Create(String),
-    Rename { list_id: Uuid, new_title: String },
+    Rename { column_id: Uuid, new_title: String },
     Delete(Uuid),
     ToggleTitleEdit(Uuid),
     SortByTag(Uuid),
@@ -21,55 +21,58 @@ pub enum ListMessage {
 }
 
 impl AppModel {
-    pub fn update_list(&mut self, message: ListMessage) -> Task<cosmic::Action<Message>> {
+    pub fn update_column(&mut self, message: ColumnMessage) -> Task<cosmic::Action<Message>> {
         match message {
-            ListMessage::Create(title) => {
+            ColumnMessage::Create(title) => {
                 if let Some(board) = self.active_board_mut() {
-                    let position = board.lists.len() as u32;
-                    board.lists.push(List::new(title, position));
+                    let position = board.columns.len() as u32;
+                    board.columns.push(Column::new(title, position));
                     board.updated_at = jiff::Timestamp::now();
                 }
                 self.save_active_board()
             }
 
-            ListMessage::Rename { list_id, new_title } => {
+            ColumnMessage::Rename {
+                column_id,
+                new_title,
+            } => {
                 if let Some(board) = self.active_board_mut() {
-                    if let Some(list) = board.lists.iter_mut().find(|l| l.id == list_id) {
-                        list.title = new_title;
+                    if let Some(column) = board.columns.iter_mut().find(|l| l.id == column_id) {
+                        column.title = new_title;
                         self.touch_board();
                     }
                 }
                 self.save_active_board()
             }
 
-            ListMessage::Delete(list_id) => {
+            ColumnMessage::Delete(column_id) => {
                 if let Some(board) = self.active_board_mut() {
-                    board.lists.retain(|l| l.id != list_id);
-                    for (i, list) in board.lists.iter_mut().enumerate() {
-                        list.position = i as u32;
+                    board.columns.retain(|l| l.id != column_id);
+                    for (i, column) in board.columns.iter_mut().enumerate() {
+                        column.position = i as u32;
                     }
                     self.touch_board();
                 }
-                if self.editing_list_title == Some(list_id) {
-                    self.editing_list_title = None;
+                if self.editing_column_title == Some(column_id) {
+                    self.editing_column_title = None;
                 }
                 self.save_active_board()
             }
 
-            ListMessage::ToggleTitleEdit(list_id) => {
-                self.editing_list_title = if self.editing_list_title == Some(list_id) {
+            ColumnMessage::ToggleTitleEdit(column_id) => {
+                self.editing_column_title = if self.editing_column_title == Some(column_id) {
                     None
                 } else {
-                    Some(list_id)
+                    Some(column_id)
                 };
                 Task::none()
             }
 
-            ListMessage::SortByTag(list_id) => {
+            ColumnMessage::SortByTag(column_id) => {
                 if let Some(board) = self.active_board_mut() {
                     let tags = board.tags.clone();
-                    if let Some(list) = board.lists.iter_mut().find(|l| l.id == list_id) {
-                        list.cards.sort_by_key(|card| {
+                    if let Some(column) = board.columns.iter_mut().find(|l| l.id == column_id) {
+                        column.cards.sort_by_key(|card| {
                             let name = card
                                 .tag_ids
                                 .iter()
@@ -78,7 +81,7 @@ impl AppModel {
                                 .min();
                             (name.is_none(), name.unwrap_or_default())
                         });
-                        for (i, card) in list.cards.iter_mut().enumerate() {
+                        for (i, card) in column.cards.iter_mut().enumerate() {
                             card.position = i as u32;
                         }
                     }
@@ -87,21 +90,23 @@ impl AppModel {
                 self.save_active_board()
             }
 
-            ListMessage::OpenNewCardInput(input_id, list_id) => {
-                self.new_card_input = Some((input_id.clone(), list_id, String::new()));
+            ColumnMessage::OpenNewCardInput(input_id, column_id) => {
+                self.new_card_input = Some((input_id.clone(), column_id, String::new()));
                 cosmic::widget::text_input::focus(input_id)
             }
 
-            ListMessage::NewCardInputChanged(text) => {
+            ColumnMessage::NewCardInputChanged(text) => {
                 if let Some((_, _, ref mut t)) = self.new_card_input {
                     *t = text;
                 }
                 Task::none()
             }
 
-            ListMessage::ConfirmNewCard(list_id) => self.update_card(CardMessage::Create(list_id)),
+            ColumnMessage::ConfirmNewCard(column_id) => {
+                self.update_card(CardMessage::Create(column_id))
+            }
 
-            ListMessage::DismissNewInput => {
+            ColumnMessage::DismissNewInput => {
                 self.new_card_input = None;
                 Task::none()
             }

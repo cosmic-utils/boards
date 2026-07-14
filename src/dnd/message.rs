@@ -7,13 +7,13 @@ use crate::app::{AppModel, Message};
 pub enum DndMessage {
     CardStarted(Uuid),
     HoverChanged {
-        list_id: Uuid,
+        column_id: Uuid,
         before_card_id: Option<Uuid>,
     },
     LeftDropZone,
     CardDropped {
         card_id: Uuid,
-        target_list_id: Uuid,
+        target_column_id: Uuid,
         before_card_id: Option<Uuid>,
     },
     CardCancelled,
@@ -25,10 +25,10 @@ impl AppModel {
             DndMessage::CardStarted(_card_id) => Task::none(),
 
             DndMessage::HoverChanged {
-                list_id,
+                column_id,
                 before_card_id,
             } => {
-                self.drag_hover = Some((list_id, before_card_id));
+                self.drag_hover = Some((column_id, before_card_id));
                 Task::none()
             }
 
@@ -39,7 +39,7 @@ impl AppModel {
 
             DndMessage::CardDropped {
                 card_id,
-                target_list_id,
+                target_column_id,
                 before_card_id,
             } => {
                 self.drag_hover = None;
@@ -48,20 +48,20 @@ impl AppModel {
                 }
 
                 let actual_before_id = before_card_id.and_then(|target_card_id| {
-                    let list = self
+                    let column = self
                         .active_board()?
-                        .lists
+                        .columns
                         .iter()
-                        .find(|l| l.id == target_list_id)?;
-                    let src_idx = list.cards.iter().position(|c| c.id == card_id);
-                    let tgt_idx = list.cards.iter().position(|c| c.id == target_card_id);
+                        .find(|l| l.id == target_column_id)?;
+                    let src_idx = column.cards.iter().position(|c| c.id == card_id);
+                    let tgt_idx = column.cards.iter().position(|c| c.id == target_card_id);
                     match (src_idx, tgt_idx) {
-                        (Some(s), Some(t)) if s < t => list.cards.get(t + 1).map(|c| c.id),
+                        (Some(s), Some(t)) if s < t => column.cards.get(t + 1).map(|c| c.id),
                         _ => Some(target_card_id),
                     }
                 });
 
-                self.move_card(card_id, target_list_id, actual_before_id);
+                self.move_card(card_id, target_column_id, actual_before_id);
                 self.save_active_board()
             }
         }

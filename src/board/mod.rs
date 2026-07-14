@@ -6,7 +6,7 @@ pub mod dialog;
 pub mod message;
 pub mod view;
 
-use crate::list::List;
+use crate::column::Column;
 use crate::tag::Tag;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,7 +19,7 @@ pub struct Board {
     pub description: String,
     #[serde(default = "default_background")]
     pub background: cosmic::iced::Color,
-    pub lists: Vec<List>,
+    pub columns: Vec<Column>,
     #[serde(default)]
     pub tags: Vec<Tag>,
     #[serde(default = "default_board_icon")]
@@ -36,7 +36,7 @@ impl Board {
             title,
             description: String::new(),
             background: default_background(),
-            lists: Vec::new(),
+            columns: Vec::new(),
             tags: Vec::new(),
             icon: default_board_icon(),
             created_at: now,

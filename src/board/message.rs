@@ -15,7 +15,6 @@ pub enum BoardMessage {
     Rename { id: Uuid, new_title: String },
     SetIcon { id: Uuid, icon: String },
     Delete(Uuid),
-    Activate(Uuid),
     OpenSettings(Uuid),
 }
 
@@ -102,8 +101,6 @@ impl AppModel {
                 });
                 Task::batch([task, self.update_title()])
             }
-
-            BoardMessage::Activate(id) => self.activate_board(id),
 
             BoardMessage::OpenSettings(id) => {
                 let activate_task = self.activate_board(id);

@@ -23,9 +23,9 @@ pub enum CardMessage {
     Open(Uuid),
     MoveUp(Uuid),
     MoveDown(Uuid),
-    MoveToList {
+    MoveToColumn {
         card_id: Uuid,
-        target_list_id: Uuid,
+        target_column_id: Uuid,
     },
     ToggleTag {
         card_id: Uuid,
@@ -46,18 +46,18 @@ pub enum CardMessage {
 impl AppModel {
     pub fn update_card(&mut self, message: CardMessage) -> Task<cosmic::Action<Message>> {
         match message {
-            CardMessage::Create(list_id) => {
+            CardMessage::Create(column_id) => {
                 let title = match &self.new_card_input {
-                    Some((_, lid, t)) if *lid == list_id => t.trim().to_string(),
+                    Some((_, lid, t)) if *lid == column_id => t.trim().to_string(),
                     _ => return Task::none(),
                 };
                 if title.is_empty() {
                     return Task::none();
                 }
                 if let Some(board) = self.active_board_mut() {
-                    if let Some(list) = board.lists.iter_mut().find(|l| l.id == list_id) {
-                        let position = list.cards.len() as u32;
-                        list.cards.push(Card::new(title, position));
+                    if let Some(column) = board.columns.iter_mut().find(|l| l.id == column_id) {
+                        let position = column.cards.len() as u32;
+                        column.cards.push(Card::new(title, position));
                     }
                     board.updated_at = jiff::Timestamp::now();
                 }
@@ -88,10 +88,10 @@ impl AppModel {
 
             CardMessage::Delete(card_id) => {
                 if let Some(board) = self.active_board_mut() {
-                    for list in &mut board.lists {
-                        if list.cards.iter().any(|c| c.id == card_id) {
-                            list.cards.retain(|c| c.id != card_id);
-                            for (i, card) in list.cards.iter_mut().enumerate() {
+                    for column in &mut board.columns {
+                        if column.cards.iter().any(|c| c.id == card_id) {
+                            column.cards.retain(|c| c.id != card_id);
+                            for (i, card) in column.cards.iter_mut().enumerate() {
                                 card.position = i as u32;
                             }
                             break;
@@ -112,11 +112,11 @@ impl AppModel {
 
             CardMessage::MoveUp(card_id) => {
                 if let Some(board) = self.active_board_mut() {
-                    for list in &mut board.lists {
-                        if let Some(idx) = list.cards.iter().position(|c| c.id == card_id) {
+                    for column in &mut board.columns {
+                        if let Some(idx) = column.cards.iter().position(|c| c.id == card_id) {
                             if idx > 0 {
-                                list.cards.swap(idx - 1, idx);
-                                for (i, card) in list.cards.iter_mut().enumerate() {
+                                column.cards.swap(idx - 1, idx);
+                                for (i, card) in column.cards.iter_mut().enumerate() {
                                     card.position = i as u32;
                                 }
                             }
@@ -130,12 +130,12 @@ impl AppModel {
 
             CardMessage::MoveDown(card_id) => {
                 if let Some(board) = self.active_board_mut() {
-                    for list in &mut board.lists {
-                        let len = list.cards.len();
-                        if let Some(idx) = list.cards.iter().position(|c| c.id == card_id) {
+                    for column in &mut board.columns {
+                        let len = column.cards.len();
+                        if let Some(idx) = column.cards.iter().position(|c| c.id == card_id) {
                             if idx + 1 < len {
-                                list.cards.swap(idx, idx + 1);
-                                for (i, card) in list.cards.iter_mut().enumerate() {
+                                column.cards.swap(idx, idx + 1);
+                                for (i, card) in column.cards.iter_mut().enumerate() {
                                     card.position = i as u32;
                                 }
                             }
@@ -147,11 +147,11 @@ impl AppModel {
                 self.save_active_board()
             }
 
-            CardMessage::MoveToList {
+            CardMessage::MoveToColumn {
                 card_id,
-                target_list_id,
+                target_column_id,
             } => {
-                self.move_card(card_id, target_list_id, None);
+                self.move_card(card_id, target_column_id, None);
                 self.save_active_board()
             }
 
@@ -199,21 +199,26 @@ impl AppModel {
         }
     }
 
-    pub fn move_card(&mut self, card_id: Uuid, target_list_id: Uuid, before_card_id: Option<Uuid>) {
+    pub fn move_card(
+        &mut self,
+        card_id: Uuid,
+        target_column_id: Uuid,
+        before_card_id: Option<Uuid>,
+    ) {
         if let Some(board) = self.active_board_mut() {
             let now = jiff::Timestamp::now();
             let mut moved_card: Option<Card> = None;
-            for list in &mut board.lists {
-                if let Some(idx) = list.cards.iter().position(|c| c.id == card_id) {
-                    moved_card = Some(list.cards.remove(idx));
-                    for (i, c) in list.cards.iter_mut().enumerate() {
+            for column in &mut board.columns {
+                if let Some(idx) = column.cards.iter().position(|c| c.id == card_id) {
+                    moved_card = Some(column.cards.remove(idx));
+                    for (i, c) in column.cards.iter_mut().enumerate() {
                         c.position = i as u32;
                     }
                     break;
                 }
             }
             if let Some(mut card) = moved_card {
-                if let Some(target) = board.lists.iter_mut().find(|l| l.id == target_list_id) {
+                if let Some(target) = board.columns.iter_mut().find(|l| l.id == target_column_id) {
                     let insert_at = before_card_id
                         .and_then(|bid| target.cards.iter().position(|c| c.id == bid))
                         .unwrap_or(target.cards.len());
