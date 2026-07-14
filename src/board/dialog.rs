@@ -2,10 +2,80 @@ use crate::dialog::{DialogHost, DialogSlot};
 use cosmic::iced::{Background, Color};
 use cosmic::{Element, Task, iced::Length, widget};
 use icon_index::IconIndex;
+use std::collections::HashSet;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::board::Board;
 use crate::fl;
+
+/// Caps how many icon buttons a search can lay out per render, since even
+/// a narrow query can otherwise match into the thousands of icons in a
+/// full system icon index.
+const MAX_ICON_RESULTS: usize = 10;
+
+/// Shown by default, before the user searches for something else.
+const CURATED_ICONS: &[&str] = &[
+    "view-grid-symbolic",
+    "view-list-symbolic",
+    "view-continuous-symbolic",
+    "view-app-grid-symbolic",
+    "go-home-symbolic",
+    "bookmark-new-symbolic",
+    "edit-find-symbolic",
+    "mail-send-symbolic",
+    "folder-symbolic",
+    "folder-documents-symbolic",
+    "folder-download-symbolic",
+    "folder-music-symbolic",
+    "folder-pictures-symbolic",
+    "folder-videos-symbolic",
+    "folder-publicshare-symbolic",
+    "user-home-symbolic",
+    "starred-symbolic",
+    "emblem-favorite-symbolic",
+    "emblem-important-symbolic",
+    "emblem-ok-symbolic",
+    "emblem-photos-symbolic",
+    "emblem-shared-symbolic",
+    "x-office-calendar-symbolic",
+    "x-office-address-book-symbolic",
+    "x-office-document-symbolic",
+    "x-office-spreadsheet-symbolic",
+    "x-office-presentation-symbolic",
+    "x-office-drawing-symbolic",
+    "applications-office-symbolic",
+    "accessories-text-editor-symbolic",
+    "accessories-calculator-symbolic",
+    "accessories-dictionary-symbolic",
+    "applications-development-symbolic",
+    "applications-graphics-symbolic",
+    "applications-engineering-symbolic",
+    "applications-science-symbolic",
+    "applications-system-symbolic",
+    "utilities-terminal-symbolic",
+    "preferences-system-symbolic",
+    "preferences-desktop-symbolic",
+    "system-users-symbolic",
+    "computer-symbolic",
+    "network-workgroup-symbolic",
+    "network-wireless-symbolic",
+    "network-server-symbolic",
+    "drive-harddisk-symbolic",
+    "printer-symbolic",
+    "mail-unread-symbolic",
+    "user-available-symbolic",
+    "contact-new-symbolic",
+    "applications-games-symbolic",
+    "applications-multimedia-symbolic",
+    "camera-photo-symbolic",
+    "audio-headphones-symbolic",
+    "multimedia-player-symbolic",
+    "applications-internet-symbolic",
+    "weather-clear-symbolic",
+    "alarm-symbolic",
+    "battery-symbolic",
+];
 
 fn icon_choice_button<'a>(name: &'a str, active: bool) -> Element<'a, BoardSettingsMessage> {
     let border_width = if active { 2.0 } else { 0.0 };
@@ -105,7 +175,7 @@ impl DialogHost for NewBoardDialog {
 #[derive(Debug, Clone)]
 pub struct BoardSettingsDialog {
     pub dialog: DialogSlot<BoardSettingsState>,
-    pub icons: IconIndex,
+    pub icons: Option<Arc<IconIndex>>,
 }
 
 #[derive(Debug, Clone)]
@@ -114,6 +184,7 @@ pub struct BoardSettingsState {
     pub title: String,
     pub input_id: widget::Id,
     pub current_icon: String,
+    pub icon_query: String,
 }
 
 #[derive(Debug, Clone)]
@@ -121,20 +192,22 @@ pub enum BoardSettingsMessage {
     TitleChanged(String),
     Rename,
     SetIcon(String),
+    IconQueryChanged(String),
     Delete,
     Close,
 }
 
 impl BoardSettingsDialog {
-    pub fn new(board: &Board) -> Self {
+    pub fn new(board: &Board, icons: Option<Arc<IconIndex>>) -> Self {
         Self {
             dialog: DialogSlot::new(BoardSettingsState {
                 board_id: board.id,
                 title: board.title.clone(),
                 input_id: widget::Id::unique(),
                 current_icon: board.icon.clone(),
+                icon_query: String::new(),
             }),
-            icons: IconIndex::scan().expect("failed to scan icons"),
+            icons,
         }
     }
 }
@@ -150,18 +223,39 @@ impl DialogHost for BoardSettingsDialog {
                 .on_submit(|_| BoardSettingsMessage::Rename)
                 .width(Length::Fill);
 
-            let icon_buttons: Vec<Element<'_, Self::Message>> = self
-                .icons
-                .icons()
-                .map(|icon| icon_choice_button(&icon.name, state.current_icon == *icon.name))
-                .collect();
+            let query = state.icon_query.trim();
+            let icon_buttons: Vec<Element<'_, Self::Message>> = if query.is_empty() {
+                CURATED_ICONS
+                    .iter()
+                    .map(|name| icon_choice_button(name, state.current_icon == *name))
+                    .collect()
+            } else {
+                self.icons
+                    .as_ref()
+                    .map(|icons| {
+                        let mut seen = HashSet::new();
+                        icons
+                            .search(query)
+                            .filter(|icon| seen.insert(icon.name.as_str()))
+                            .take(MAX_ICON_RESULTS)
+                            .map(|icon| {
+                                icon_choice_button(&icon.name, state.current_icon == *icon.name)
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            };
 
-            let icon_section = (!icon_buttons.is_empty()).then_some(
-                widget::settings::section().add(
-                    cosmic::widget::flex_row(icon_buttons)
-                        .spacing(cosmic::theme::spacing().space_xs),
-                ),
-            );
+            let icon_search = widget::text_input(fl!("search-icons"), state.icon_query.as_str())
+                .on_input(BoardSettingsMessage::IconQueryChanged)
+                .width(Length::Fill);
+
+            let icon_section =
+                widget::settings::section()
+                    .add(icon_search)
+                    .add(widget::scrollable(
+                        widget::flex_row(icon_buttons).spacing(cosmic::theme::spacing().space_xs),
+                    ));
 
             let content = widget::settings::view_column(vec![
                 widget::settings::section()
@@ -203,6 +297,11 @@ impl DialogHost for BoardSettingsDialog {
             BoardSettingsMessage::SetIcon(icon) => {
                 if let Some(state) = self.dialog.get_mut() {
                     state.current_icon = icon;
+                }
+            }
+            BoardSettingsMessage::IconQueryChanged(query) => {
+                if let Some(state) = self.dialog.get_mut() {
+                    state.icon_query = query;
                 }
             }
             BoardSettingsMessage::Rename

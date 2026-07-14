@@ -9,7 +9,9 @@ use cosmic::{
     prelude::*,
     widget::{self, about::About, icon, menu, nav_bar},
 };
+use icon_index::IconIndex;
 use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
@@ -56,6 +58,7 @@ pub struct AppModel {
     pub editing_column_title: Option<Uuid>,
     pub search_query: String,
     pub suppress_next_card_open: bool,
+    pub icons: Option<Arc<IconIndex>>,
 }
 
 #[derive(Debug, Clone)]
@@ -77,6 +80,7 @@ pub enum Message {
 
     BoardLoaded(Board),
     BoardSaved,
+    IconsLoaded(IconIndex),
     LoadError(String),
     LaunchUrl(String),
     UpdateConfig(Config),
@@ -168,6 +172,7 @@ impl cosmic::Application for AppModel {
             editing_column_title: None,
             search_query: String::new(),
             suppress_next_card_open: false,
+            icons: None,
         };
 
         let load_task = if let Some(board_id) = app.active_board_id() {
@@ -183,9 +188,14 @@ impl cosmic::Application for AppModel {
             Task::none()
         };
 
+        let icons_task = Task::perform(async move { IconIndex::scan() }, |result| match result {
+            Ok(index) => cosmic::Action::App(Message::IconsLoaded(index)),
+            Err(e) => cosmic::Action::App(Message::LoadError(e.to_string())),
+        });
+
         let title_task = app.update_title();
 
-        (app, Task::batch([load_task, title_task]))
+        (app, Task::batch([load_task, icons_task, title_task]))
     }
 
     fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
@@ -306,6 +316,10 @@ impl cosmic::Application for AppModel {
 
             Message::BoardLoaded(board) => {
                 self.boards.insert(board.id, board);
+            }
+
+            Message::IconsLoaded(index) => {
+                self.icons = Some(Arc::new(index));
             }
 
             Message::ToggleContextPage(page) => {

@@ -107,7 +107,7 @@ impl AppModel {
                 let Some(board) = self.boards.get(&id) else {
                     return activate_task;
                 };
-                let dialog = BoardSettingsDialog::new(board);
+                let dialog = BoardSettingsDialog::new(board, self.icons.clone());
                 let focus = dialog
                     .dialog
                     .get()
