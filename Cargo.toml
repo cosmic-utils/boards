@@ -21,7 +21,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 jiff = { version = "0.2", features = ["serde"] }
 directories = "5"
 tempfile = "3"
-dialogs = { path = "../../edfloreshz/dialogs" }
+icon-index = { git = "https://github.com/edfloreshz/icon-index" }
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
@@ -55,10 +55,10 @@ features = [
 ]
 
 # Uncomment to test a locally-cloned libcosmic
-[patch.'https://github.com/pop-os/libcosmic']
-libcosmic = { git = "https://github.com/edfloreshz/libcosmic", branch = "patch-1" }
-cosmic-config = { git = "https://github.com/edfloreshz/libcosmic", branch = "patch-1" }
-cosmic-theme = { git = "https://github.com/edfloreshz/libcosmic", branch = "patch-1" }
+# [patch.'https://github.com/pop-os/libcosmic']
+# libcosmic = { git = "https://github.com/edfloreshz/libcosmic", branch = "patch-1" }
+# cosmic-config = { git = "https://github.com/edfloreshz/libcosmic", branch = "patch-1" }
+# cosmic-theme = { git = "https://github.com/edfloreshz/libcosmic", branch = "patch-1" }
 
 # libcosmic = { path = "../libcosmic" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }

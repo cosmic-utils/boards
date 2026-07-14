@@ -1,5 +1,5 @@
+use crate::dialog::{DialogHost, DialogSlot};
 use cosmic::{Task, iced::Length, widget};
-use dialogs::{DialogHost, DialogSlot};
 
 use crate::fl;
 

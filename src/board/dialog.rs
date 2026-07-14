@@ -1,27 +1,13 @@
+use crate::dialog::{DialogHost, DialogSlot};
 use cosmic::iced::{Background, Color};
 use cosmic::{Element, Task, iced::Length, widget};
-use dialogs::{DialogHost, DialogSlot};
+use icon_index::IconIndex;
 use uuid::Uuid;
 
 use crate::board::Board;
 use crate::fl;
 
-const BOARD_ICON_CHOICES: &[&str] = &[
-    "view-grid-symbolic",
-    "folder-symbolic",
-    "user-home-symbolic",
-    "emblem-favorite-symbolic",
-    "x-office-calendar-symbolic",
-    "applications-engineering-symbolic",
-    "mail-unread-symbolic",
-    "system-users-symbolic",
-    "task-due-symbolic",
-    "applications-games-symbolic",
-    "weather-clear-symbolic",
-    "emblem-important-symbolic",
-];
-
-fn icon_choice_button(name: &'static str, active: bool) -> Element<'static, BoardSettingsMessage> {
+fn icon_choice_button<'a>(name: &'a str, active: bool) -> Element<'a, BoardSettingsMessage> {
     let border_width = if active { 2.0 } else { 0.0 };
     let style = move |_focused: bool, theme: &cosmic::Theme| {
         let accent = Color::from(theme.cosmic().accent_color());
@@ -119,6 +105,7 @@ impl DialogHost for NewBoardDialog {
 #[derive(Debug, Clone)]
 pub struct BoardSettingsDialog {
     pub dialog: DialogSlot<BoardSettingsState>,
+    pub icons: IconIndex,
 }
 
 #[derive(Debug, Clone)]
@@ -147,6 +134,7 @@ impl BoardSettingsDialog {
                 input_id: widget::Id::unique(),
                 current_icon: board.icon.clone(),
             }),
+            icons: IconIndex::scan().expect("failed to scan icons"),
         }
     }
 }
@@ -154,7 +142,7 @@ impl BoardSettingsDialog {
 impl DialogHost for BoardSettingsDialog {
     type Message = BoardSettingsMessage;
 
-    fn dialog(&self) -> Option<Element<'_, Self::Message>> {
+    fn dialog<'a>(&'a self) -> Option<Element<'a, Self::Message>> {
         self.dialog.get().map(|state| {
             let title_input = widget::text_input(fl!("board-name"), state.title.as_str())
                 .id(state.input_id.clone())
@@ -162,12 +150,17 @@ impl DialogHost for BoardSettingsDialog {
                 .on_submit(|_| BoardSettingsMessage::Rename)
                 .width(Length::Fill);
 
-            let icon_buttons: Vec<Element<'_, Self::Message>> = BOARD_ICON_CHOICES
-                .iter()
-                .map(|name| icon_choice_button(name, state.current_icon == *name))
+            let icon_buttons: Vec<Element<'_, Self::Message>> = self
+                .icons
+                .icons()
+                .map(|icon| icon_choice_button(&icon.name, state.current_icon == *icon.name))
                 .collect();
-            let icon_section = widget::settings::section().add(
-                cosmic::widget::flex_row(icon_buttons).spacing(cosmic::theme::spacing().space_xs),
+
+            let icon_section = (!icon_buttons.is_empty()).then_some(
+                widget::settings::section().add(
+                    cosmic::widget::flex_row(icon_buttons)
+                        .spacing(cosmic::theme::spacing().space_xs),
+                ),
             );
 
             let content = widget::settings::view_column(vec![

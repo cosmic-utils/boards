@@ -34,3 +34,4 @@ debian/*
 !debian/source
 
 .claude/
+.claudeignore

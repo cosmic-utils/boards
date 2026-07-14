@@ -6,6 +6,7 @@ mod card;
 mod checklist;
 mod column;
 mod config;
+mod dialog;
 mod dnd;
 mod i18n;
 mod menu_bar;

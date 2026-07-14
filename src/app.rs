@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
+use crate::dialog::DialogHost;
 use cosmic::{
     Application,
     app::context_drawer,
@@ -8,7 +9,6 @@ use cosmic::{
     prelude::*,
     widget::{self, about::About, icon, menu, nav_bar},
 };
-use dialogs::DialogHost;
 use std::collections::HashMap;
 use uuid::Uuid;
 

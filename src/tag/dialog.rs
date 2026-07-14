@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
+use crate::dialog::{DialogHost, DialogSlot};
 use cosmic::{
     Element, Task,
     iced::Length,
@@ -8,7 +9,6 @@ use cosmic::{
         color_picker::{ColorPickerModel, ColorPickerUpdate},
     },
 };
-use dialogs::{DialogHost, DialogSlot};
 use uuid::Uuid;
 
 use crate::{
